@@ -1,8 +1,8 @@
 import pandas as pd
 import random
+from bidi.algorithm import get_display  # Fixes Arabic text display
 
 # Load the vocabulary Excel file
-# Make sure TOEFL_Vocabulary.xlsx is in your working directory
 df = pd.read_excel("TOEFL_Vocabulary.xlsx")
 
 # Get user input for number of words and starting index
@@ -19,7 +19,6 @@ while True:
         if start_index < 0 or start_index >= total_words:
             print("Starting index out of range. Try again.")
             continue
-        # Make sure we don't exceed list length
         end_index = min(start_index + num_words, total_words)
         break
     except ValueError:
@@ -30,33 +29,34 @@ words_subset = df.iloc[start_index:end_index].sample(frac=1, random_state=random
 
 def ask_question(row, df_choices):
     correct = row["Arabic Translation"]
-    # Build list of wrong answers (exclude correct answer)
-    wrong_options = df_choices[ df_choices["Arabic Translation"] != correct ]["Arabic Translation"].tolist()
-    # If there are less than 4 available wrong options, use all
-    num_wrong_needed = 4
-    wrong_choices = random.sample(wrong_options, min(num_wrong_needed, len(wrong_options)))
-    choices = wrong_choices + [correct]
+    correct_fixed = get_display(correct)  # Fix Arabic text display
+
+    # Get wrong answers
+    wrong_options = df_choices[df_choices["Arabic Translation"] != correct]["Arabic Translation"].tolist()
+    wrong_choices = random.sample(wrong_options, min(4, len(wrong_options)))  # 4 wrong answers
+    wrong_choices_fixed = [get_display(word) for word in wrong_choices]  # Fix Arabic text display
+    
+    choices = wrong_choices_fixed + [correct_fixed]
     random.shuffle(choices)
-    return choices
+    return choices, correct_fixed
 
 print("\nStarting the vocabulary quiz...\n")
 
-# Use the full dataset (or you can use words_subset) as pool for wrong answers
-for index, row in words_subset.iterrows():
+for _, row in words_subset.iterrows():
     word = row["Word"]
     correct_answer = row["Arabic Translation"]
     example_sentence = row["Example Sentence"]
-    
-    # Prepare the initial set of choices
-    choices = ask_question(row, df)
-    # Keep track of which choices have been eliminated if answer is wrong.
+
+    choices, correct_fixed = ask_question(row, df)
+
     remaining_choices = choices.copy()
-    
     answered_correctly = False
+
     while not answered_correctly:
-        print(f"\nWhat is the Arabic translation for the word: '{word}'?")
+        print(f"\nWhat is the Arabic translation for: '{word}'?")
         for i, option in enumerate(remaining_choices, 1):
             print(f"{i}. {option}")
+
         try:
             answer = int(input("Your choice (enter number): "))
             if answer < 1 or answer > len(remaining_choices):
@@ -67,25 +67,20 @@ for index, row in words_subset.iterrows():
             continue
 
         chosen = remaining_choices[answer - 1]
-        if chosen == correct_answer:
-            print("Correct!")
+        if chosen == correct_fixed:
+            print("✅ Correct!")
             print(f"Example Sentence: {example_sentence}")
             answered_correctly = True
         else:
-            print("Incorrect.")
-            # Remove the wrong choice
+            print("❌ Incorrect. Try again.")
             remaining_choices.pop(answer - 1)
-            if len(remaining_choices) == 0:
-                # Safety fallback; should not occur since correct remains in list
-                print("No choices left. The correct answer was:", correct_answer)
+            if len(remaining_choices) == 1:
+                print(f"The correct answer was: {correct_fixed}")
                 answered_correctly = True
-            else:
-                print("Please try again. Remaining choices:")
-    
-    # Ask if user wants to proceed to the next word
+
     proceed = input("Do you want to proceed to the next word? (y/n): ").lower()
     if proceed not in ("y", "yes"):
-        print("Exiting the quiz. Good luck with your studies!")
+        print("Exiting the quiz. Keep practicing!")
         break
 
 print("Quiz completed!")
