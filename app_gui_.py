@@ -18,6 +18,8 @@ class VocabTrainer(QWidget):
         self.setWindowTitle("TOEFL Vocabulary Trainer")
         self.setGeometry(100, 100, 500, 400)
         self.initUI()
+        self.example_label = QLabel("", self)
+
 
     def initUI(self):
         layout = QVBoxLayout()
@@ -115,7 +117,12 @@ class VocabTrainer(QWidget):
 
         selected_text = self.radio_buttons[selected_id].text()
         if selected_text == self.correct_answer:
-            QMessageBox.information(self, "Correct!", f"✅ Correct!\nExample: {self.example_sentence}")
+            msg_box = QMessageBox()
+            msg_box.setWindowTitle("Correct!")
+            msg_box.setText("✅ Correct!\n\nExample Sentence:\n" + self.example_sentence)
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec_()  # Show message before moving to the next question
+
             self.current_index += 1
             self.next_question()
         else:
