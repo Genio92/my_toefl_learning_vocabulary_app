@@ -83,6 +83,8 @@ class VocabTrainer(QWidget):
         self.next_question()
 
     def next_question(self):
+        for btn in self.radio_buttons:
+            btn.setEnabled(True)  # Re-enable all buttons before a new question
         if self.current_index >= len(self.words_subset):
             QMessageBox.information(self, "Finished!", "You have completed the quiz!")
             return
